@@ -177,6 +177,9 @@ def generate_qr():
 # -------------------------
 # MARK ATTENDANCE
 # -------------------------
+# -------------------------
+# MARK ATTENDANCE
+# -------------------------
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
 
@@ -208,22 +211,21 @@ def mark_attendance():
         ):
             return jsonify({"status": "already_marked"})
 
+    # FIXED: Correct column order to match Google Sheet
     row = [
-        today,
-        time_now,
-        name,
-        roll,
-        division,
-        SESSION["subject"],
-        SESSION["lecture"],
-        SESSION["teacher"],
+        name,                   # Name
+        roll,                   # Roll
+        division,               # Division
+        SESSION["subject"],     # Subject
+        SESSION["lecture"],     # Lecture
+        today,                  # Date
+        time_now,               # Time
+        SESSION["teacher"]      # Teacher
     ]
 
     sheet.append_row(row)
 
     return jsonify({"status": "present"})
-
-
 # -------------------------
 # VIEW ATTENDANCE BY DIVISION
 # -------------------------
