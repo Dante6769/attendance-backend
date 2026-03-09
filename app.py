@@ -22,11 +22,10 @@ SESSION = {}
 # GOOGLE SHEETS SETUP
 # -------------------------
 
-# YOUR GOOGLE SHEET ID
 SHEET_ID = "1MDQUccq8OXRAArfcjVuKI_GJH0GEQNr-jabAvlMcRws"
 
-# Authenticate using service account JSON from env variable
 creds_json_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
 if not creds_json_path:
     raise RuntimeError(
         "Set GOOGLE_APPLICATION_CREDENTIALS env variable to service account JSON path"
@@ -37,7 +36,6 @@ scopes = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_file(creds_json_path, scopes=scopes)
 gc = gspread.authorize(creds)
 
-# OPEN YOUR EXISTING GOOGLE SHEET
 sheet = gc.open_by_key(SHEET_ID).sheet1
 
 
@@ -46,6 +44,7 @@ sheet = gc.open_by_key(SHEET_ID).sheet1
 # -------------------------
 @app.route("/teacher_login", methods=["POST"])
 def teacher_login():
+
     data = request.json
     username = str(data.get("username"))
     password = str(data.get("password"))
@@ -240,32 +239,5 @@ def attendance_by_division():
 # RUN SERVER
 # -------------------------
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)re"],
-        SESSION["teacher"],
-    ]
-
-    sheet.append_row(row)
-
-    return jsonify({"status": "present"})
-
-
-# -------------------------
-# VIEW ATTENDANCE BY DIVISION
-# -------------------------
-@app.route("/attendance_by_division")
-def attendance_by_division():
-
-    division = request.args.get("division")
-
-    records = sheet.get_all_records()
-
-    filtered = [r for r in records if r["Division"] == division]
-
-    return jsonify(filtered)
-
-
-# -------------------------
-# RUN SERVER
-# -------------------------
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
