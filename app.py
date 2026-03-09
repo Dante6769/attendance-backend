@@ -22,23 +22,22 @@ SESSION = {}
 # GOOGLE SHEETS SETUP
 # -------------------------
 
-# Your Google Sheet ID
+# YOUR GOOGLE SHEET ID
 SHEET_ID = "1MDQUccq8OXRAArfcjVuKI_GJH0GEQNr-jabAvlMcRws"
 
-# Get credentials path from environment variable
+# Authenticate using service account JSON from env variable
 creds_json_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-
 if not creds_json_path:
     raise RuntimeError(
         "Set GOOGLE_APPLICATION_CREDENTIALS env variable to service account JSON path"
     )
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-creds = Credentials.from_service_account_file(creds_json_path, scopes=scopes)
 
+creds = Credentials.from_service_account_file(creds_json_path, scopes=scopes)
 gc = gspread.authorize(creds)
 
-# Open the correct Google Sheet
+# OPEN YOUR EXISTING GOOGLE SHEET
 sheet = gc.open_by_key(SHEET_ID).sheet1
 
 
@@ -56,6 +55,7 @@ def teacher_login():
     df["password"] = df["password"].astype(str)
 
     user = df[(df["username"] == username) & (df["password"] == password)]
+
     if not user.empty:
         SESSION["teacher"] = username
         return jsonify({"status": "success"})
@@ -68,6 +68,7 @@ def teacher_login():
 # -------------------------
 @app.route("/start_session", methods=["POST"])
 def start_session():
+
     data = request.json
     division = data["division"]
     lecture = int(data["lecture"])
@@ -88,7 +89,6 @@ def start_session():
         return jsonify({"status": "no_lecture_today"})
 
     subject = lec.iloc[0]["Subject"]
-
     session_id = str(datetime.now().timestamp())
 
     SESSION.update(
@@ -120,8 +120,8 @@ def stop_session():
 # -------------------------
 @app.route("/student_login", methods=["POST"])
 def student_login():
-    data = request.json
 
+    data = request.json
     username = str(data.get("username")).strip()
     password = str(data.get("password")).strip()
 
@@ -195,7 +195,6 @@ def mark_attendance():
     today = str(datetime.now().date())
     time_now = datetime.now().strftime("%H:%M")
 
-    # Check if already marked
     records = sheet.get_all_records()
 
     for r in records:
@@ -206,7 +205,6 @@ def mark_attendance():
         ):
             return jsonify({"status": "already_marked"})
 
-    # Append attendance
     row = [
         today,
         time_now,
@@ -215,6 +213,34 @@ def mark_attendance():
         division,
         SESSION["subject"],
         SESSION["lecture"],
+        SESSION["teacher"],
+    ]
+
+    sheet.append_row(row)
+
+    return jsonify({"status": "present"})
+
+
+# -------------------------
+# VIEW ATTENDANCE BY DIVISION
+# -------------------------
+@app.route("/attendance_by_division")
+def attendance_by_division():
+
+    division = request.args.get("division")
+
+    records = sheet.get_all_records()
+
+    filtered = [r for r in records if r["Division"] == division]
+
+    return jsonify(filtered)
+
+
+# -------------------------
+# RUN SERVER
+# -------------------------
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)re"],
         SESSION["teacher"],
     ]
 
