@@ -7,6 +7,7 @@ from io import BytesIO
 import os
 import gspread
 from google.oauth2.service_account import Credentials
+import json
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -17,6 +18,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 students_file = "data/students.xlsx"
 teachers_file = "data/teachers.xlsx"
 SESSION = {}
+
 
 # -------------------------
 # GOOGLE SHEETS SETUP
@@ -29,18 +31,17 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Load service account file
-SERVICE_ACCOUNT_FILE = "google_service_key.json"
+# Load credentials from environment variable
+service_key = json.loads(os.environ["GOOGLE_SERVICE_KEY"])
 
-creds = Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE,
+creds = Credentials.from_service_account_info(
+    service_key,
     scopes=SCOPES
 )
 
 gc = gspread.authorize(creds)
 
 sheet = gc.open_by_key(SHEET_ID).sheet1
-
 
 # -------------------------
 # TEACHER LOGIN
