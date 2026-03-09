@@ -14,17 +14,20 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # -------------------------
 # FILES & SESSION
 # -------------------------
-students_file = "data/students.xlsx"     # for login only
+students_file = "data/students.xlsx"
 teachers_file = "data/teachers.xlsx"
 SESSION = {}
 
 # -------------------------
 # GOOGLE SHEETS SETUP
 # -------------------------
-GOOGLE_SHEET_NAME = "Attendance"  # your sheet name
 
-# Authenticate using service account JSON from env variable
+# Your Google Sheet ID
+SHEET_ID = "1MDQUccq8OXRAArfcjVuKI_GJH0GEQNr-jabAvlMcRws"
+
+# Get credentials path from environment variable
 creds_json_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+
 if not creds_json_path:
     raise RuntimeError(
         "Set GOOGLE_APPLICATION_CREDENTIALS env variable to service account JSON path"
@@ -32,18 +35,12 @@ if not creds_json_path:
 
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_file(creds_json_path, scopes=scopes)
+
 gc = gspread.authorize(creds)
 
-try:
-    sheet = gc.open(GOOGLE_SHEET_NAME).sheet1
-except gspread.SpreadsheetNotFound:
-    # create a new spreadsheet if it doesn't exist
-    sh = gc.create(GOOGLE_SHEET_NAME)
-    sheet = sh.sheet1
-    # Add headers
-    sheet.append_row(
-        ["Date", "Time", "Name", "Roll", "Division", "Subject", "Lecture", "Teacher"]
-    )
+# Open the correct Google Sheet
+sheet = gc.open_by_key(SHEET_ID).sheet1
+
 
 # -------------------------
 # TEACHER LOGIN
@@ -62,7 +59,9 @@ def teacher_login():
     if not user.empty:
         SESSION["teacher"] = username
         return jsonify({"status": "success"})
+
     return jsonify({"status": "invalid"})
+
 
 # -------------------------
 # START SESSION
@@ -75,18 +74,21 @@ def start_session():
     teacher = data["teacher"]
 
     timetable_file = f"data/timetable{division}.xlsx"
+
     if os.path.exists(timetable_file):
         timetable = pd.read_excel(timetable_file)
     else:
         return jsonify({"status": "timetable_missing"})
 
     today = datetime.now().strftime("%A")
+
     lec = timetable[(timetable["Day"] == today) & (timetable["Lecture"] == lecture)]
 
     if lec.empty:
         return jsonify({"status": "no_lecture_today"})
 
     subject = lec.iloc[0]["Subject"]
+
     session_id = str(datetime.now().timestamp())
 
     SESSION.update(
@@ -103,6 +105,7 @@ def start_session():
         {"status": "session_started", "subject": subject, "session": session_id}
     )
 
+
 # -------------------------
 # STOP SESSION
 # -------------------------
@@ -111,24 +114,29 @@ def stop_session():
     SESSION.clear()
     return jsonify({"status": "stopped"})
 
+
 # -------------------------
 # STUDENT LOGIN
 # -------------------------
 @app.route("/student_login", methods=["POST"])
 def student_login():
     data = request.json
+
     username = str(data.get("username")).strip()
     password = str(data.get("password")).strip()
 
     df = pd.read_excel(students_file, dtype=str)
+
     df["Username"] = df["Username"].str.strip()
     df["Password"] = df["Password"].str.strip()
 
     user = df[(df["Username"] == username) & (df["Password"] == password)]
+
     if user.empty:
         return jsonify({"status": "fail"})
 
     student = user.iloc[0]
+
     return jsonify(
         {
             "status": "success",
@@ -138,33 +146,42 @@ def student_login():
         }
     )
 
+
 # -------------------------
 # GENERATE QR
 # -------------------------
 @app.route("/generate_qr")
 def generate_qr():
+
     session_id = SESSION.get("session")
+
     if not session_id:
         return jsonify({"error": "session not started"})
 
     frontend_url = "https://dante6769.github.io/attendance-frontend"
+
     url = f"{frontend_url}/verify.html?session={session_id}"
 
     img = qrcode.make(url)
+
     buffer = BytesIO()
     img.save(buffer)
     buffer.seek(0)
+
     return send_file(buffer, mimetype="image/png")
+
 
 # -------------------------
 # MARK ATTENDANCE
 # -------------------------
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
+
     if "session" not in SESSION:
         return jsonify({"status": "attendance_closed"})
 
     data = request.json
+
     name = data.get("name")
     roll = data.get("roll")
     division = data.get("division")
@@ -180,11 +197,16 @@ def mark_attendance():
 
     # Check if already marked
     records = sheet.get_all_records()
+
     for r in records:
-        if str(r["Roll"]) == str(roll) and r["Date"] == today and r["Lecture"] == SESSION["lecture"]:
+        if (
+            str(r["Roll"]) == str(roll)
+            and r["Date"] == today
+            and str(r["Lecture"]) == str(SESSION["lecture"])
+        ):
             return jsonify({"status": "already_marked"})
 
-    # Append to Google Sheet
+    # Append attendance
     row = [
         today,
         time_now,
@@ -195,19 +217,26 @@ def mark_attendance():
         SESSION["lecture"],
         SESSION["teacher"],
     ]
+
     sheet.append_row(row)
 
     return jsonify({"status": "present"})
+
 
 # -------------------------
 # VIEW ATTENDANCE BY DIVISION
 # -------------------------
 @app.route("/attendance_by_division")
 def attendance_by_division():
+
     division = request.args.get("division")
+
     records = sheet.get_all_records()
+
     filtered = [r for r in records if r["Division"] == division]
+
     return jsonify(filtered)
+
 
 # -------------------------
 # RUN SERVER
