@@ -121,7 +121,7 @@ def generate_qr():
         return jsonify({"error": "session not started"})
 
     # Replace with your deployed frontend URL
-    frontend_url = "https://YOUR_FRONTEND_URL"  
+    frontend_url = "https://dante6769.github.io/attendance-frontend/L"  
     url = f"{frontend_url}/verify.html?session={session_id}"
 
     img = qrcode.make(url)
