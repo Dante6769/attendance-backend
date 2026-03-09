@@ -22,14 +22,18 @@ SESSION = {}
 # GOOGLE SHEETS SETUP
 # -------------------------
 GOOGLE_SHEET_NAME = "Attendance"  # your sheet name
+
 # Authenticate using service account JSON from env variable
 creds_json_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
 if not creds_json_path:
-    raise RuntimeError("Set GOOGLE_APPLICATION_CREDENTIALS env variable to service account JSON path")
-    
+    raise RuntimeError(
+        "Set GOOGLE_APPLICATION_CREDENTIALS env variable to service account JSON path"
+    )
+
 scopes = ["https://www.googleapis.com/auth/spreadsheets"]
 creds = Credentials.from_service_account_file(creds_json_path, scopes=scopes)
 gc = gspread.authorize(creds)
+
 try:
     sheet = gc.open(GOOGLE_SHEET_NAME).sheet1
 except gspread.SpreadsheetNotFound:
@@ -37,7 +41,9 @@ except gspread.SpreadsheetNotFound:
     sh = gc.create(GOOGLE_SHEET_NAME)
     sheet = sh.sheet1
     # Add headers
-    sheet.append_row(["Date", "Time", "Name", "Roll", "Division", "Subject", "Lecture", "Teacher"])
+    sheet.append_row(
+        ["Date", "Time", "Name", "Roll", "Division", "Subject", "Lecture", "Teacher"]
+    )
 
 # -------------------------
 # TEACHER LOGIN
@@ -83,17 +89,19 @@ def start_session():
     subject = lec.iloc[0]["Subject"]
     session_id = str(datetime.now().timestamp())
 
-    SESSION["session"] = session_id
-    SESSION["division"] = division
-    SESSION["lecture"] = lecture
-    SESSION["subject"] = subject
-    SESSION["teacher"] = teacher
+    SESSION.update(
+        {
+            "session": session_id,
+            "division": division,
+            "lecture": lecture,
+            "subject": subject,
+            "teacher": teacher,
+        }
+    )
 
-    return jsonify({
-        "status": "session_started",
-        "subject": subject,
-        "session": session_id
-    })
+    return jsonify(
+        {"status": "session_started", "subject": subject, "session": session_id}
+    )
 
 # -------------------------
 # STOP SESSION
@@ -121,12 +129,14 @@ def student_login():
         return jsonify({"status": "fail"})
 
     student = user.iloc[0]
-    return jsonify({
-        "status": "success",
-        "name": student["Name"],
-        "roll": str(student["Roll"]),
-        "division": student["Division"]
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "name": student["Name"],
+            "roll": str(student["Roll"]),
+            "division": student["Division"],
+        }
+    )
 
 # -------------------------
 # GENERATE QR
@@ -183,7 +193,7 @@ def mark_attendance():
         division,
         SESSION["subject"],
         SESSION["lecture"],
-        SESSION["teacher"]
+        SESSION["teacher"],
     ]
     sheet.append_row(row)
 
