@@ -30,7 +30,7 @@ SCOPES = [
 ]
 
 # Load service account file
-SERVICE_ACCOUNT_FILE = "service_account.json"
+SERVICE_ACCOUNT_FILE = "google_service_key.json"
 
 creds = Credentials.from_service_account_file(
     SERVICE_ACCOUNT_FILE,
