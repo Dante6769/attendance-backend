@@ -24,16 +24,19 @@ SESSION = {}
 
 SHEET_ID = "1MDQUccq8OXRAArfcjVuKI_GJH0GEQNr-jabAvlMcRws"
 
-creds_json_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
+]
 
-if not creds_json_path:
-    raise RuntimeError(
-        "Set GOOGLE_APPLICATION_CREDENTIALS env variable to service account JSON path"
-    )
+# Load service account file
+SERVICE_ACCOUNT_FILE = "service_account.json"
 
-scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+creds = Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE,
+    scopes=SCOPES
+)
 
-creds = Credentials.from_service_account_file(creds_json_path, scopes=scopes)
 gc = gspread.authorize(creds)
 
 sheet = gc.open_by_key(SHEET_ID).sheet1
